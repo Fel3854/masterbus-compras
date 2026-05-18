@@ -3,6 +3,7 @@ name: Keep Alive
 on:
   schedule:
     - cron: "*/14 * * * *"  # cada 14 minutos, justo antes del sleep de Render
+  workflow_dispatch:         # permite correrlo manualmente desde GitHub
 
 jobs:
   ping:
