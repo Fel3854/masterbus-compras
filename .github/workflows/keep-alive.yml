@@ -1,0 +1,12 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"  # cada 14 minutos, justo antes del sleep de Render
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        run: curl -sf ${{ secrets.APP_URL }}/login -o /dev/null && echo "OK" || echo "No response"
