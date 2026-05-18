@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Mis Pedidos{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+  <h1>Mis Pedidos</h1>
+  <a href="/pedidos/nuevo" class="btn btn-primary">+ Nuevo Pedido</a>
+</div>
+
+<div class="card">
+  {% if pedidos %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Descripción</th>
+            <th>N° Parte</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Sector</th>
+            <th>Base</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr>
+            <td>{{ p.id }}</td>
+            <td>
+              {{ p.descripcion }}
+              {% if p.estado == "RECHAZADO" and p.comentario_autorizacion %}
+                <div style="font-size:.75rem; color:#ef4444; margin-top:.2rem">
+                  Motivo: {{ p.comentario_autorizacion }}
+                </div>
+              {% endif %}
+            </td>
+            <td>{{ p.numero_parte or "—" }}</td>
+            <td>{{ p.cantidad }}</td>
+            <td>{{ p.unidad }}</td>
+            <td>{{ p.sector_nombre }}</td>
+            <td>{{ p.base_nombre }}</td>
+            <td>
+              <span class="badge badge-{{ p.estado | lower }}">{{ p.estado }}</span>
+            </td>
+            <td style="white-space:nowrap; color:#64748b; font-size:.8rem">
+              {{ p.creado_en.strftime('%d/%m/%Y') if p.creado_en else "—" }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p>Todavía no realizaste ningún pedido.</p>
+      <a href="/pedidos/nuevo" class="btn btn-primary" style="margin-top:1rem">Crear primer pedido</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

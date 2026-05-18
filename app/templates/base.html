@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Pedidos de Compra{% endblock %} — Master Bus</title>
+  <link rel="icon" href="https://rhh-lilac.vercel.app/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=3">
+</head>
+<body>
+  <nav>
+    <a href="/" class="brand">
+      <img src="/static/logo.png" alt="Master Bus" onerror="this.style.display='none'">
+    </a>
+
+    {% set path = request.url.path if request else '' %}
+
+    {% if "PEDIDOR" in user.roles %}
+      <a href="/pedidos/mis-pedidos" {% if path.startswith('/pedidos/mis-pedidos') %}aria-current="page"{% endif %}>Mis Pedidos</a>
+      <a href="/pedidos/nuevo" {% if path.startswith('/pedidos/nuevo') %}aria-current="page"{% endif %}>+ Nuevo Pedido</a>
+    {% endif %}
+
+    {% if "AUTORIZADOR" in user.roles %}
+      <a href="/autorizaciones/pendientes" {% if path.startswith('/autorizaciones') %}aria-current="page"{% endif %}>Autorización</a>
+    {% endif %}
+
+    {% if "COMPRADOR" in user.roles %}
+      <a href="/compras/dashboard" {% if path.startswith('/compras') %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="/catalogo/" {% if path.startswith('/catalogo') %}aria-current="page"{% endif %}>Catálogo</a>
+    {% endif %}
+
+    <span class="user-chip">{{ user.nombre_display }} · {{ user.sector_nombre }}</span>
+
+    <form method="POST" action="/logout" style="margin:0">
+      <button type="submit" class="logout-btn">Salir</button>
+    </form>
+  </nav>
+
+  <main>
+    {% set flashes = get_flashes(request) %}
+    {% for f in flashes %}
+      <div class="alert alert-{{ f.category }}">{{ f.message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

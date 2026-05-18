@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Compras{% endblock %}
+
+{% block content %}
+<h1>Dashboard Compras</h1>
+<p style="color:#64748b; font-size:.875rem; margin-bottom:1rem">Pedidos autorizados y recibidos</p>
+
+<!-- Filtros -->
+<form method="GET" action="/compras/dashboard" class="card" style="padding:1rem">
+  <div class="filters">
+    <div class="form-group">
+      <label for="sector_id">Sector</label>
+      <select name="sector_id" id="sector_id">
+        <option value="">Todos los sectores</option>
+        {% for s in filtros.sectores %}
+          <option value="{{ s.id }}" {% if filtro_sector == s.id %}selected{% endif %}>{{ s.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="base_id">Base</label>
+      <select name="base_id" id="base_id">
+        <option value="">Todas las bases</option>
+        {% for b in filtros.bases %}
+          <option value="{{ b.id }}" {% if filtro_base == b.id %}selected{% endif %}>{{ b.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="estado">Estado</label>
+      <select name="estado" id="estado">
+        <option value="">Todos</option>
+        <option value="AUTORIZADO" {% if filtro_estado == "AUTORIZADO" %}selected{% endif %}>Autorizados</option>
+        <option value="RECIBIDO"   {% if filtro_estado == "RECIBIDO"   %}selected{% endif %}>Recibidos</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="/compras/dashboard" class="btn btn-outline" style="margin-left:.5rem">Limpiar</a>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  {% if pedidos %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha Aut.</th>
+            <th>Sector</th>
+            <th>Base</th>
+            <th>Pedidor</th>
+            <th>Descripción</th>
+            <th>Cant.</th>
+            <th>Unidad</th>
+            <th>N° Parte</th>
+            <th>Autorizador</th>
+            <th>Precio Ref.</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr>
+            <td>{{ p.id }}</td>
+            <td style="white-space:nowrap; font-size:.8rem; color:#64748b">
+              {{ p.fecha_autorizacion.strftime('%d/%m/%Y') if p.fecha_autorizacion else "—" }}
+            </td>
+            <td>{{ p.sector_nombre }}</td>
+            <td>{{ p.base_nombre }}</td>
+            <td>{{ p.pedidor_nombre }}</td>
+            <td>
+              {{ p.descripcion }}
+              {% if p.comentario_autorizacion %}
+                <div style="font-size:.75rem; color:#64748b; margin-top:.2rem">{{ p.comentario_autorizacion }}</div>
+              {% endif %}
+            </td>
+            <td>{{ p.cantidad }}</td>
+            <td>{{ p.unidad }}</td>
+            <td>{{ p.numero_parte or "—" }}</td>
+            <td>{{ p.autorizador_nombre or "—" }}</td>
+            <td>
+              {% if p.precio_ref %}
+                <strong style="color:#059669">${{ "%.2f"|format(p.precio_ref) }}</strong>
+              {% else %}
+                <span style="color:#94a3b8">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-{{ p.estado | lower }}">{{ p.estado }}</span>
+            </td>
+            <td>
+              {% if p.estado == "AUTORIZADO" %}
+              <form method="POST" action="/compras/{{ p.id }}/recibir" style="margin:0">
+                <button type="submit" class="btn btn-outline btn-sm">✓ Recibido</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-top:.75rem; font-size:.85rem; color:#64748b">
+      <span>{{ total }} pedido{{ "s" if total != 1 }} · Página {{ page }} de {{ pages }}</span>
+      <div style="display:flex; gap:.5rem">
+        {% if page > 1 %}
+          <a href="?sector_id={{ filtro_sector or '' }}&base_id={{ filtro_base or '' }}&estado={{ filtro_estado }}&page={{ page - 1 }}"
+             class="btn btn-outline btn-sm">‹ Anterior</a>
+        {% endif %}
+        {% if page < pages %}
+          <a href="?sector_id={{ filtro_sector or '' }}&base_id={{ filtro_base or '' }}&estado={{ filtro_estado }}&page={{ page + 1 }}"
+             class="btn btn-outline btn-sm">Siguiente ›</a>
+        {% endif %}
+      </div>
+    </div>
+
+  {% else %}
+    <div class="empty">
+      <p>No hay pedidos
+        {% if filtro_sector or filtro_base or filtro_estado %}con los filtros seleccionados{% endif %}.
+      </p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión — Master Bus Compras</title>
+  <link rel="icon" href="https://rhh-lilac.vercel.app/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-header">
+        <img src="/static/logo.png" alt="Master Bus" onerror="this.outerHTML='<span class=\'brand-fallback\'>Master Bus</span>'">
+      </div>
+      <div class="login-body">
+        <h1>Sistema de Compras</h1>
+
+        {% if error %}
+          <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/login">
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" required autofocus
+                   autocomplete="username" placeholder="Tu usuario">
+          </div>
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required
+                   autocomplete="current-password" placeholder="Tu contraseña">
+          </div>
+          <button type="submit" class="btn btn-primary"
+                  style="width:100%; margin-top:.5rem; justify-content:center; padding:.65rem 1rem">
+            Iniciar Sesión
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

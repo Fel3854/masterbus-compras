@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Pedido{% endblock %}
+
+{% block content %}
+<h1>Nuevo Pedido</h1>
+
+<div class="card" style="max-width:680px">
+  <form method="POST" action="/pedidos/nuevo" id="pedido-form">
+
+    <!-- Tipo de ítem -->
+    <div class="form-group">
+      <label>Tipo de ítem</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="tipo" value="CATALOGADO" checked onchange="toggleTipo(this.value)">
+          Desde catálogo
+        </label>
+        <label>
+          <input type="radio" name="tipo" value="LIBRE" onchange="toggleTipo(this.value)">
+          Ítem libre
+        </label>
+      </div>
+    </div>
+
+    <!-- Base operativa -->
+    <div class="form-group">
+      <label for="base_id">Base operativa</label>
+      <select name="base_id" id="base_id" required>
+        {% if bases | length == 1 %}
+          <option value="{{ bases[0].id }}" selected>{{ bases[0].nombre }}</option>
+        {% else %}
+          <option value="">— Seleccionar base —</option>
+          {% for b in bases %}
+            <option value="{{ b.id }}">{{ b.nombre }}</option>
+          {% endfor %}
+        {% endif %}
+      </select>
+    </div>
+
+    <!-- Desde catálogo -->
+    <div id="bloque-catalogo">
+      <div class="form-group" style="position:relative">
+        <label for="catalogo_buscar">Artículo del catálogo</label>
+        <input type="text" id="catalogo_buscar" autocomplete="off"
+               placeholder="Escribí al menos 3 caracteres para buscar…">
+        <input type="hidden" name="catalogo_id" id="catalogo_id">
+        <div id="catalogo_dropdown" style="
+          display:none; position:absolute; z-index:100; left:0; right:0;
+          background:#fff; border:1px solid #d1d5db; border-radius:6px;
+          box-shadow:0 4px 12px rgba(0,0,0,.12); max-height:280px;
+          overflow-y:auto; margin-top:2px;
+        "></div>
+      </div>
+      <div id="catalogo_seleccionado" style="display:none; margin-top:-.5rem; margin-bottom:.75rem;
+           font-size:.8rem; color:#059669; padding:.3rem .5rem; background:#d1fae5;
+           border-radius:4px; align-items:center; gap:.5rem">
+        <span id="catalogo_seleccionado_texto"></span>
+        <button type="button" onclick="limpiarCatalogo()"
+                style="background:none;border:none;cursor:pointer;color:#065f46;font-size:1rem;padding:0;line-height:1">×</button>
+      </div>
+    </div>
+
+    <!-- Ítem libre -->
+    <div id="bloque-libre" style="display:none">
+      <div class="form-group">
+        <label for="descripcion">Descripción del artículo</label>
+        <input type="text" name="descripcion" id="descripcion" placeholder="Descripción del ítem">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="numero_parte">N° de Parte <span style="color:#94a3b8">(opcional)</span></label>
+        <input type="text" name="numero_parte" id="numero_parte" placeholder="Ej: ABC-1234">
+      </div>
+      <div class="form-group">
+        <label for="cantidad">Cantidad</label>
+        <input type="number" name="cantidad" id="cantidad" min="0.01" step="any" required placeholder="0">
+      </div>
+      <div class="form-group">
+        <label for="unidad">Unidad</label>
+        <input type="text" name="unidad" id="unidad" required placeholder="UN, KG, MT…">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="notas">Notas <span style="color:#94a3b8">(opcional)</span></label>
+      <textarea name="notas" id="notas" rows="2" placeholder="Observaciones adicionales…"></textarea>
+    </div>
+
+    <div style="display:flex; gap:.75rem; margin-top:.5rem">
+      <button type="submit" class="btn btn-primary">Enviar Pedido</button>
+      <a href="/pedidos/mis-pedidos" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// ── Toggle tipo de ítem ────────────────────────────────────
+function toggleTipo(valor) {
+  document.getElementById('bloque-catalogo').style.display = valor === 'CATALOGADO' ? '' : 'none';
+  document.getElementById('bloque-libre').style.display    = valor === 'LIBRE'       ? '' : 'none';
+  document.getElementById('descripcion').required = valor === 'LIBRE';
+  // el campo hidden catalogo_id es requerido solo si catalogado y hay selección
+}
+
+// ── Autocomplete catálogo ──────────────────────────────────
+const inputBuscar   = document.getElementById('catalogo_buscar');
+const inputHidden   = document.getElementById('catalogo_id');
+const dropdown      = document.getElementById('catalogo_dropdown');
+const chipSelec     = document.getElementById('catalogo_seleccionado');
+const chipTexto     = document.getElementById('catalogo_seleccionado_texto');
+
+let debounceTimer = null;
+let itemsActuales = [];
+let indiceActivo  = -1;
+
+inputBuscar.addEventListener('input', function () {
+  const q = this.value.trim();
+  clearTimeout(debounceTimer);
+  if (q.length < 3) { cerrarDropdown(); return; }
+  debounceTimer = setTimeout(() => buscar(q), 280);
+});
+
+inputBuscar.addEventListener('keydown', function (e) {
+  if (!itemsActuales.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    indiceActivo = Math.min(indiceActivo + 1, itemsActuales.length - 1);
+    resaltarActivo();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    indiceActivo = Math.max(indiceActivo - 1, 0);
+    resaltarActivo();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (indiceActivo >= 0) seleccionar(itemsActuales[indiceActivo]);
+  } else if (e.key === 'Escape') {
+    cerrarDropdown();
+  }
+});
+
+document.addEventListener('click', function (e) {
+  if (!dropdown.contains(e.target) && e.target !== inputBuscar) cerrarDropdown();
+});
+
+async function buscar(q) {
+  const res = await fetch(`/pedidos/catalogo-buscar?q=${encodeURIComponent(q)}`);
+  if (!res.ok) return;
+  itemsActuales = await res.json();
+  indiceActivo  = -1;
+  renderDropdown();
+}
+
+function renderDropdown() {
+  if (!itemsActuales.length) {
+    dropdown.innerHTML = '<div style="padding:.6rem 1rem; color:#94a3b8; font-size:.875rem">Sin resultados</div>';
+  } else {
+    dropdown.innerHTML = itemsActuales.map((item, i) =>
+      `<div class="ac-item" data-i="${i}" style="padding:.55rem 1rem; cursor:pointer; font-size:.875rem; border-bottom:1px solid #f0f4f8">
+        ${item.codigo ? `<span style="font-size:.75rem;color:#64748b;margin-right:.4rem">[${item.codigo}]</span>` : ''}
+        ${item.descripcion}
+        ${item.unidad ? `<span style="font-size:.75rem;color:#94a3b8;margin-left:.3rem">${item.unidad}</span>` : ''}
+       </div>`
+    ).join('');
+    dropdown.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        seleccionar(itemsActuales[parseInt(el.dataset.i)]);
+      });
+      el.addEventListener('mouseover', () => {
+        indiceActivo = parseInt(el.dataset.i);
+        resaltarActivo();
+      });
+    });
+  }
+  dropdown.style.display = 'block';
+}
+
+function resaltarActivo() {
+  dropdown.querySelectorAll('.ac-item').forEach((el, i) => {
+    el.style.background = i === indiceActivo ? '#eff6ff' : '';
+  });
+  const activo = dropdown.querySelector(`[data-i="${indiceActivo}"]`);
+  if (activo) activo.scrollIntoView({ block: 'nearest' });
+}
+
+function seleccionar(item) {
+  inputHidden.value = item.id;
+  inputBuscar.value = '';
+  chipTexto.textContent = (item.codigo ? `[${item.codigo}] ` : '') + item.descripcion;
+  chipSelec.style.display = 'flex';
+  if (item.unidad) document.getElementById('unidad').value = item.unidad;
+  cerrarDropdown();
+}
+
+function limpiarCatalogo() {
+  inputHidden.value = '';
+  inputBuscar.value = '';
+  chipSelec.style.display = 'none';
+}
+
+function cerrarDropdown() {
+  dropdown.style.display = 'none';
+  itemsActuales = [];
+  indiceActivo  = -1;
+}
+</script>
+{% endblock %}

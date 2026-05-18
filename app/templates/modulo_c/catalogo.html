@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Artículos{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:.75rem">
+  <h1 style="margin-bottom:0">Catálogo de Artículos</h1>
+  <div style="display:flex; gap:.5rem">
+    <form method="POST" action="/catalogo/sync"
+          onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Sincronizando…'">
+      <button type="submit" class="btn btn-outline">⟳ Sincronizar desde MasterBus</button>
+    </form>
+    <a href="/catalogo/nuevo" class="btn btn-primary">+ Nuevo Artículo</a>
+  </div>
+</div>
+
+{% set sync_ok = request.query_params.get('sync_ok') %}
+{% if sync_ok %}
+  <div class="alert alert-success" style="margin-bottom:1.5rem">
+    Sincronización completada — <strong>{{ sync_ok }}</strong> artículos procesados desde MasterBus.
+  </div>
+{% endif %}
+
+<!-- Barra de búsqueda -->
+<div class="card" style="margin-bottom:1.5rem; padding:1rem 1.5rem">
+  <form method="GET" action="/catalogo/" style="display:flex; gap:.75rem; align-items:flex-end; flex-wrap:wrap">
+    <div class="form-group" style="margin-bottom:0; flex:1; min-width:200px">
+      <label for="busqueda">Buscar</label>
+      <input type="text" name="busqueda" id="busqueda" value="{{ busqueda }}"
+             placeholder="Descripción o código…">
+    </div>
+    <div style="display:flex; align-items:center; gap:.4rem; padding-bottom:.1rem">
+      <input type="checkbox" name="mostrar_inactivos" id="mostrar_inactivos" value="1"
+             {% if mostrar_inactivos %}checked{% endif %}
+             onchange="this.form.submit()">
+      <label for="mostrar_inactivos" style="margin-bottom:0; font-weight:400; cursor:pointer">
+        Mostrar inactivos
+      </label>
+    </div>
+    <button type="submit" class="btn btn-outline">Buscar</button>
+    {% if busqueda %}
+      <a href="/catalogo/" class="btn btn-outline">Limpiar</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if items %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th>Unidad</th>
+            <th style="text-align:right">Último Precio</th>
+            <th>Última Compra</th>
+            <th>Origen</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr {% if not item.activo %}style="opacity:.55"{% endif %}>
+            <td>
+              {% if item.codigo %}
+                <code style="font-size:.8rem; background:#f0f4f8; padding:.1rem .4rem; border-radius:3px">{{ item.codigo }}</code>
+              {% else %}
+                <span style="color:#94a3b8">—</span>
+              {% endif %}
+            </td>
+            <td>{{ item.descripcion }}</td>
+            <td>{{ item.unidad_defecto or "—" }}</td>
+            <td style="text-align:right; font-weight:600">
+              {% if item.ultimo_precio %}
+                ${{ "%.2f"|format(item.ultimo_precio) }}
+              {% else %}
+                <span style="color:#94a3b8">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.8rem; color:#64748b">
+              {{ item.ultima_compra.strftime('%d/%m/%Y') if item.ultima_compra else "—" }}
+            </td>
+            <td>
+              {% if item.masterbus_id %}
+                <span class="badge badge-pendiente" style="font-size:.7rem">MasterBus</span>
+              {% else %}
+                <span style="color:#94a3b8; font-size:.8rem">Manual</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.activo %}
+                <span class="badge badge-autorizado">Activo</span>
+              {% else %}
+                <span class="badge badge-rechazado">Inactivo</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display:flex; gap:.4rem; flex-wrap:wrap">
+                <a href="/catalogo/{{ item.id }}/editar" class="btn btn-outline btn-sm">Editar</a>
+                {% if item.activo %}
+                  <form method="POST" action="/catalogo/{{ item.id }}/desactivar"
+                        onsubmit="return confirm('¿Desactivar este artículo?')">
+                    <button type="submit" class="btn btn-danger btn-sm">Desactivar</button>
+                  </form>
+                {% else %}
+                  <form method="POST" action="/catalogo/{{ item.id }}/activar">
+                    <button type="submit" class="btn btn-success btn-sm">Activar</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:.75rem; font-size:.8rem; color:#94a3b8">
+      {{ items | length }} artículo{% if items | length != 1 %}s{% endif %}
+    </div>
+  {% else %}
+    <div class="empty">
+      {% if busqueda %}
+        <p>No se encontraron artículos para "<strong>{{ busqueda }}</strong>".</p>
+        <a href="/catalogo/" class="btn btn-outline" style="margin-top:1rem">Ver todos</a>
+      {% else %}
+        <p>El catálogo está vacío.</p>
+        <a href="/catalogo/nuevo" class="btn btn-primary" style="margin-top:1rem">Agregar primer artículo</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Pendientes de Autorización{% endblock %}
+
+{% block content %}
+<h1>Pendientes de Autorización</h1>
+<p style="color:#64748b; font-size:.875rem; margin-bottom:1.5rem">
+  Sector: <strong>{{ user.sector_nombre }}</strong>
+  {% if user.acceso_todas_bases %} · Todas las bases{% endif %}
+</p>
+
+{% if pedidos %}
+  {% for p in pedidos %}
+  <div class="card card-pending">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+      <div>
+        <strong style="font-size:1rem">{{ p.descripcion }}</strong>
+        <span style="color:#94a3b8; font-size:.8rem; margin-left:.5rem">#{{ p.id }}</span>
+        <div style="margin-top:.4rem; font-size:.875rem; color:#475569">
+          Pedido por <strong>{{ p.pedidor_nombre }}</strong> ·
+          {{ p.sector_nombre }} / {{ p.base_nombre }} ·
+          {{ p.cantidad }} {{ p.unidad }}
+          {% if p.numero_parte %} · Parte: <code>{{ p.numero_parte }}</code>{% endif %}
+        </div>
+        {% if p.notas %}
+          <div style="margin-top:.35rem; font-size:.8rem; color:#64748b; font-style:italic">
+            "{{ p.notas }}"
+          </div>
+        {% endif %}
+        <div style="margin-top:.5rem; font-size:.8rem; color:#64748b">
+          Creado: {{ p.creado_en.strftime('%d/%m/%Y %H:%M') if p.creado_en else "—" }}
+        </div>
+      </div>
+
+      {% if p.precio_referencia %}
+        <div style="text-align:right; white-space:nowrap;">
+          <div style="font-size:.75rem; color:#64748b; text-transform:uppercase; letter-spacing:.5px">Último precio</div>
+          <div style="font-size:1.25rem; font-weight:700; color:#059669">
+            ${{ "%.2f"|format(p.precio_referencia) }}
+          </div>
+        </div>
+      {% else %}
+        <div style="color:#94a3b8; font-size:.8rem; white-space:nowrap;">Precio referencia: —</div>
+      {% endif %}
+    </div>
+
+    <!-- Acciones -->
+    <div style="margin-top:1rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+      <form method="POST" action="/autorizaciones/{{ p.id }}/autorizar" style="flex:1; min-width:240px">
+        <div class="inline-form">
+          <input type="number" name="precio_ref" step="any" placeholder="Precio ref. (opcional)"
+                 style="max-width:200px"
+                 {% if p.precio_referencia %}value="{{ p.precio_referencia }}"{% endif %}>
+          <textarea name="comentario" placeholder="Comentario (opcional)" rows="2"></textarea>
+          <div>
+            <button type="submit" class="btn btn-success btn-sm">✓ Autorizar</button>
+          </div>
+        </div>
+      </form>
+
+      <form method="POST" action="/autorizaciones/{{ p.id }}/rechazar" style="flex:1; min-width:240px">
+        <div class="inline-form">
+          <textarea name="comentario" placeholder="Motivo de rechazo (opcional)" rows="2"></textarea>
+          <div>
+            <button type="submit" class="btn btn-danger btn-sm">✗ Rechazar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <div class="empty">
+      <p>No hay pedidos pendientes de autorización en tu sector.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
